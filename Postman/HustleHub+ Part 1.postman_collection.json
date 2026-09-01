@@ -1,0 +1,465 @@
+{
+  "info": {
+    "_postman_id": "7d40710b-715c-4326-860a-b0a964c2df20",
+    "name": "HustleHub+ Part 1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "34839952",
+    "_collection_link": "https://go.postman.co/collection/34839952-7d40710b-715c-4326-860a-b0a964c2df20?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Health status is OK\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.status).to.eql(\"OK\");\r\n});\r\n\r\npm.test(\"API is using HTTPS\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.protocol).to.eql(\"HTTPS\");\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "02 - Valid Registration",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 201\", function () {\r\n    pm.response.to.have.status(201);\r\n});\r\n\r\npm.test(\"Registration is successful\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.message).to.eql(\"Registration successful\");\r\n});\r\n\r\npm.test(\"User details are returned\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.user).to.have.property(\"id\");\r\n    pm.expect(body.user.email).to.eql(\"cate@outlook.com\");\r\n    pm.expect(body.user.role).to.eql(\"freelancer\");\r\n});\r\n\r\npm.test(\"Password information is not exposed\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.user).not.to.have.property(\"password\");\r\n    pm.expect(body.user).not.to.have.property(\"passwordHash\");\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\": \"Lehlogonolo Cate Malatjie\",\r\n    \"email\": \"cate@outlook.com\",\r\n    \"password\": \"SecurePass123!\",\r\n    \"role\": \"freelancer\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "03 - Duplicate Registration",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 409\", function () {\r\n    pm.response.to.have.status(409);\r\n});\r\n\r\npm.test(\"Duplicate email is rejected\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.error).to.eql(\r\n        \"An account with this email already exists\"\r\n    );\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"name\": \"Lehlogonolo Cate Malatjie\",\r\n  \"email\": \"cate@outlook.com\",\r\n  \"password\": \"SecurePass123!\",\r\n  \"role\": \"freelancer\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "04 - Weak Password",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {\r\n    pm.response.to.have.status(400);\r\n});\r\n\r\npm.test(\"Validation is rejected\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.error).to.eql(\"Validation failed\");\r\n});\r\n\r\npm.test(\"Password validation details are returned\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.details).to.be.an(\"array\");\r\n\r\n    const passwordErrors = body.details.filter(function (item) {\r\n        return item.field === \"password\";\r\n    });\r\n\r\n    pm.expect(passwordErrors.length).to.be.greaterThan(0);\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\": \"Test User\",\r\n    \"email\": \"test@example.com\",\r\n    \"password\": \"password\",\r\n    \"role\": \"client\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "05 - Invalid Role",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {\r\n    pm.response.to.have.status(400);\r\n});\r\n\r\npm.test(\"Invalid role is rejected\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.error).to.eql(\"Validation failed\");\r\n});\r\n\r\npm.test(\"Role validation message is returned\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.details).to.be.an(\"array\");\r\n\r\n    const roleError = body.details.find(function (item) {\r\n        return item.field === \"role\";\r\n    });\r\n\r\n    pm.expect(roleError).to.exist;\r\n    pm.expect(roleError.message).to.eql(\r\n        \"Role must be either client or freelancer\"\r\n    );\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\": \"Admin User\",\r\n    \"email\": \"admin@example.com\",\r\n    \"password\": \"SecurePass123!\",\r\n    \"role\": \"admin\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "06 - Valid Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Login is successful\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.message).to.eql(\"Login successful\");\r\n});\r\n\r\npm.test(\"JWT token is returned\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.token).to.be.a(\"string\");\r\n    pm.expect(body.token.length).to.be.greaterThan(20);\r\n});\r\n\r\npm.test(\"User information is safe\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.user.email).to.eql(\"cate@outlook.com\");\r\n    pm.expect(body.user.role).to.eql(\"freelancer\");\r\n    pm.expect(body.user).not.to.have.property(\"password\");\r\n    pm.expect(body.user).not.to.have.property(\"passwordHash\");\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\nif (body.token) {\r\n    pm.environment.set(\"authToken\", body.token);\r\n}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"email\": \"cate@outlook.com\",\r\n    \"password\": \"SecurePass123!\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "07 - Invalid Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 401\", function () {\r\n    pm.response.to.have.status(401);\r\n});\r\n\r\npm.test(\"Invalid login is rejected\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.error).to.eql(\"Invalid email or password\");\r\n});\r\n\r\npm.test(\"Sensitive information is not exposed\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body).not.to.have.property(\"token\");\r\n    pm.expect(body).not.to.have.property(\"user\");\r\n    pm.expect(body).not.to.have.property(\"password\");\r\n    pm.expect(body).not.to.have.property(\"passwordHash\");\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"email\": \"cate@outlook.com\",\r\n    \"password\": \"WrongPassword123!\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "08 - Profile Without Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 401\", function () {\r\n    pm.response.to.have.status(401);\r\n});\r\n\r\npm.test(\"Authentication token is required\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.error).to.eql(\r\n        \"Authentication token is required\"\r\n    );\r\n});\r\n\r\npm.test(\"Protected data is not returned\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body).not.to.have.property(\"user\");\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/profile",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "profile"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "09 - Profile With Invalid Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 401\", function () {\r\n    pm.response.to.have.status(401);\r\n});\r\n\r\npm.test(\"Invalid token is rejected\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.error).to.eql(\r\n        \"Invalid or expired authentication token\"\r\n    );\r\n});\r\n\r\npm.test(\"Protected data is not returned\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).not.to.have.property(\"user\");\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{invalidToken}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/profile",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "profile"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10 - Valid Protected Profile",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Protected profile is returned\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.user).to.be.an(\"object\");\r\n    pm.expect(body.user).to.have.property(\"id\");\r\n    pm.expect(body.user.email).to.eql(\"cate@outlook.com\");\r\n    pm.expect(body.user.role).to.eql(\"freelancer\");\r\n});\r\n\r\npm.test(\"Password information is not exposed\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.user).not.to.have.property(\"password\");\r\n    pm.expect(body.user).not.to.have.property(\"passwordHash\");\r\n});\r\n\r\npm.test(\"Profile includes creation date\", function () {\r\n    const body = pm.response.json();\r\n\r\n    pm.expect(body.user).to.have.property(\"createdAt\");\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/profile",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "profile"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "11 - Invalid Route",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 404\", function () {\r\n    pm.response.to.have.status(404);\r\n});\r\n\r\npm.test(\"Controlled error message is returned\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.error).to.eql(\"Route not found\");\r\n});\r\n\r\npm.test(\"Internal system details are not exposed\", function () {\r\n    const responseText = pm.response.text().toLowerCase();\r\n\r\n    pm.expect(responseText).not.to.include(\"stack\");\r\n    pm.expect(responseText).not.to.include(\"node_modules\");\r\n    pm.expect(responseText).not.to.include(\"c:\\\\users\");\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/does-not-exist",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "does-not-exist"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "12 - Security Headers",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Content Security Policy header is present\", function () {\r\n    pm.expect(\r\n        pm.response.headers.has(\"Content-Security-Policy\")\r\n    ).to.be.true;\r\n});\r\n\r\npm.test(\"Content type protection header is present\", function () {\r\n    pm.expect(\r\n        pm.response.headers.get(\"X-Content-Type-Options\")\r\n    ).to.eql(\"nosniff\");\r\n});\r\n\r\npm.test(\"Clickjacking protection header is present\", function () {\r\n    pm.expect(\r\n        pm.response.headers.has(\"X-Frame-Options\")\r\n    ).to.be.true;\r\n});\r\n\r\npm.test(\"HTTPS transport security header is present\", function () {\r\n    pm.expect(\r\n        pm.response.headers.has(\"Strict-Transport-Security\")\r\n    ).to.be.true;\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

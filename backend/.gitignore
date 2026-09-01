@@ -1,0 +1,24 @@
+# Installed packages
+node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Local SSL certificates and private keys
+certs/*.pem
+*.key
+
+# Application logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+
+# VS Code local settings
+.vscode/

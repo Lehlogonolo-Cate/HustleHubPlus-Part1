@@ -1,0 +1,31 @@
+{
+  "name": "hustlehubplus-backend",
+  "version": "1.0.0",
+  "description": "Secure backend API for the HustleHub+ freelance marketplace.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "node",
+    "express",
+    "security",
+    "hustlehub"
+  ],
+  "author": "HustleHub+ Development Team",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
