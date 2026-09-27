@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
+const connectDatabase = require('./config/db');
 
 const app = express();
 
@@ -61,29 +62,28 @@ app.use((error, req, res, next) => {
   });
 });
 
-if (USE_HTTPS) {
-  const keyPath = path.join(
-    __dirname,
-    'certs',
-    'localhost-key.pem'
-  );
+const startServer = async () => {
+  try {
+    await connectDatabase();
+  } catch (error) {
+    console.error('Database connection failed:', error.message);
+    process.exit(1);
+  }
 
-  const certificatePath = path.join(
-    __dirname,
-    'certs',
-    'localhost-cert.pem'
-  );
+  if (USE_HTTPS) {
+    const httpsOptions = {
+      key: fs.readFileSync(path.join(__dirname, 'certs', 'localhost-key.pem')),
+      cert: fs.readFileSync(path.join(__dirname, 'certs', 'localhost-cert.pem'))
+    };
 
-  const httpsOptions = {
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certificatePath)
-  };
+    https.createServer(httpsOptions, app).listen(PORT, () => {
+      console.log(`HTTPS server running on port ${PORT}`);
+    });
+  } else {
+    app.listen(PORT, () => {
+      console.log(`HTTP server running on port ${PORT}`);
+    });
+  }
+};
 
-  https.createServer(httpsOptions, app).listen(PORT, () => {
-    console.log(`HTTPS server running on port ${PORT}`);
-  });
-} else {
-  app.listen(PORT, () => {
-    console.log(`HTTP server running on port ${PORT}`);
-  });
-}
+startServer();
