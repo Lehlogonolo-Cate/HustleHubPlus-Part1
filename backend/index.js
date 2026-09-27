@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const connectDatabase = require('./config/db');
 
 const app = express();
@@ -47,6 +48,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+  app.use('/api/admin', adminRoutes);
 
 app.use((req, res) => {
   return res.status(404).json({
