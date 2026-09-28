@@ -1,0 +1,188 @@
+# HustleHub+ CI/CD pipeline.
+# Any failing test, lint rule, security scan or container check fails the run.
+name: CI
+
+on:
+  push:
+    branches: [main, redesign]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  api:
+    name: API - lint & unit/integration tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint (ESLint + security plugin, no warnings allowed)
+        run: npx eslint . --max-warnings 0
+      - name: Unit and integration tests (Jest + in-memory MongoDB)
+        run: npm run test:coverage
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: api/coverage/lcov-report
+          if-no-files-found: ignore
+
+  client:
+    name: Client - lint, tests & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint (ESLint + security plugin, no warnings allowed)
+        run: npx eslint . --max-warnings 0
+      - name: Component tests (Vitest + Testing Library)
+        run: npm run test:coverage
+      - name: Production build
+        run: npm run build
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+
+  api-endpoints:
+    name: API endpoint tests (Postman / Newman over HTTPS)
+    runs-on: ubuntu-latest
+    needs: api
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - name: Generate a local TLS certificate
+        run: |
+          mkdir -p certs
+          openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 1 \
+            -keyout certs/localhost-key.pem -out certs/localhost-cert.pem \
+            -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+      - name: Start API with an in-memory database
+        run: |
+          nohup npm run start:test-server > test-server.log 2>&1 &
+          for i in $(seq 1 60); do
+            node scripts/healthcheck.js && exit 0
+            sleep 2
+          done
+          cat test-server.log
+          exit 1
+      - name: Run Postman collection with Newman
+        run: npm run test:api
+      - name: Upload Newman report and server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-report
+          path: |
+            Postman/reports/newman-report.html
+            api/test-server.log
+            api/logs/test-server/app.log
+
+  security:
+    name: Security scans (dependencies + static analysis)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Dependency audit - API (fails on high or critical)
+        working-directory: api
+        run: npm audit --omit=dev --audit-level=high
+      - name: Dependency audit - client (fails on high or critical)
+        working-directory: client
+        run: npm audit --omit=dev --audit-level=high
+      - name: Semgrep static analysis (fails on any finding)
+        run: |
+          pipx install semgrep
+          semgrep scan --metrics=off --error \
+            --config p/javascript --config p/nodejs --config p/react \
+            --config p/secrets --config p/owasp-top-ten \
+            --exclude "*.test.js" --exclude "*.test.jsx" \
+            --json-output=semgrep-results.json \
+            api/src api/scripts client/src client/nginx.conf \
+            api/Dockerfile client/Dockerfile docker-compose.yml
+      - name: Upload Semgrep results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
+
+  containers:
+    name: Docker Compose - build and smoke test
+    runs-on: ubuntu-latest
+    needs: [api, client, api-endpoints, security]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate a local TLS certificate
+        run: |
+          mkdir -p api/certs
+          openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 1 \
+            -keyout api/certs/localhost-key.pem -out api/certs/localhost-cert.pem \
+            -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,DNS:api"
+          # The containers run as non-root users with different UIDs from the runner
+          chmod 644 api/certs/*.pem
+      - name: Create compose environment
+        run: echo "JWT_SECRET=$(openssl rand -hex 48)" > .env
+      - name: Build and start the stack
+        run: docker compose up --build --detach --wait --wait-timeout 180
+      - name: Smoke test through nginx over HTTPS
+        run: |
+          set -e
+          curl -fsSk https://localhost:8443/ | grep -q '<div id="root">'
+          curl -fsSk https://localhost:8443/health | grep -q '"status":"OK"'
+          curl -sk -o /dev/null -w "%{http_code}" https://localhost:8443/api/auth/me | grep -q 401
+          curl -sI http://localhost:8080/ | grep -qi "location: https://localhost:8443/"
+          curl -sIk https://localhost:8443/ | grep -qi "content-security-policy"
+          docker compose ps
+      - name: Container logs
+        if: always()
+        run: docker compose logs --no-color > compose-logs.txt; cat compose-logs.txt
+      - name: Upload container logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-logs
+          path: compose-logs.txt
+      - name: Stop the stack
+        if: always()
+        run: docker compose down --volumes

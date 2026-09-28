@@ -1,0 +1,72 @@
+# HustleHub+ full stack: MongoDB + API + React client behind nginx.
+# Usage (from the repo root):
+#   1. Generate certificates into api/certs (see README "HTTPS")
+#   2. cp .env.example .env   and set JWT_SECRET
+#   3. docker compose up --build
+#   4. Open https://localhost:8443
+
+name: hustlehub
+
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    # Not published to the host: only the API can reach the database
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      USE_HTTPS: "true"
+      MONGO_URI: mongodb://mongo:27017/hustlehub
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      CLIENT_ORIGIN: https://localhost:8443
+      # nginx is the only proxy in front of the API
+      TRUST_PROXY: 1
+      LOG_LEVEL: info
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hustlehub.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    volumes:
+      - ./api/certs:/app/certs:ro
+      - api-logs:/app/logs
+    # Not published: reached through nginx at https://localhost:8443/api
+    networks: [backend, frontend]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+
+  client:
+    build: ./client
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8443:8443"
+      - "8080:8080"
+    volumes:
+      - ./api/certs:/etc/nginx/certs:ro
+    networks: [frontend]
+    security_opt: ["no-new-privileges:true"]
+
+networks:
+  backend:
+  frontend:
+
+volumes:
+  mongo-data:
+  api-logs:

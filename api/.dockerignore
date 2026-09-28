@@ -1,0 +1,12 @@
+node_modules
+coverage
+logs
+tests
+certs
+.env
+.env.*
+*.log
+Dockerfile
+.dockerignore
+eslint.config.js
+jest.config.js

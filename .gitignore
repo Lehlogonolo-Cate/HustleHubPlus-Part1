@@ -1,0 +1,21 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# Secrets and local certificates
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs and generated reports
+logs/
+*.log
+Postman/reports/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
