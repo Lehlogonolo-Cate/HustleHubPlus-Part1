@@ -1,0 +1,12 @@
+node_modules/
+coverage/
+logs/
+*.log
+
+# Secrets and local certificates
+.env
+.env.*
+!.env.example
+certs/
+*.pem
+*.key

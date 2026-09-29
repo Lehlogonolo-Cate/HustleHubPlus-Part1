@@ -1,0 +1,48 @@
+{
+  "name": "hustlehub-api",
+  "version": "3.0.0",
+  "description": "Secure REST API for the HustleHub+ freelance marketplace.",
+  "main": "src/server.js",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "start:test-server": "node scripts/startTestServer.js",
+    "create-admin": "node scripts/createAdmin.js",
+    "lint": "eslint .",
+    "test": "jest --runInBand",
+    "test:coverage": "jest --runInBand --coverage",
+    "test:api": "newman run ../Postman/HustleHub.postman_collection.json -e ../Postman/HustleHub.local.postman_environment.json --insecure --reporters cli,htmlextra --reporter-htmlextra-export ../Postman/reports/newman-report.html"
+  },
+  "author": "HustleHub+ Development Team",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.2",
+    "winston": "^3.19.0",
+    "xss": "^1.0.15"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "eslint-plugin-security": "^4.1.0",
+    "globals": "^17.12.0",
+    "jest": "^30.5.2",
+    "mongodb-memory-server": "^11.3.0",
+    "newman": "^6.2.2",
+    "newman-reporter-htmlextra": "^1.23.1",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.0"
+  }
+}
