@@ -239,6 +239,19 @@ Then open **https://localhost:8443**. To create an admin inside the stack, set `
 docker compose exec api node scripts/createAdmin.js
 ```
 
+To run the Postman suite against the containers, restart the API with a higher login limit (the suite logs in more than 10 times), point Newman at nginx, then restore the limit:
+
+```bash
+RATE_LIMIT_AUTH=200 docker compose up -d --wait api
+cd api && npx newman run ../Postman/HustleHub.postman_collection.json \
+  -e ../Postman/HustleHub.local.postman_environment.json --insecure \
+  --env-var baseUrl=https://localhost:8443 \
+  --env-var adminEmail=admin@hustlehub.local --env-var adminPassword=<ADMIN_PASSWORD from .env>
+cd .. && docker compose up -d --wait api        # back to the production limit of 10
+```
+
+Useful commands: `docker compose ps` (health status), `docker compose logs -f api`, `docker compose exec api cat /app/logs/app.log` (structured logs), and `docker compose down` (stop; add `-v` to also delete the database volume).
+
 ### 5.7 Environment variables (API)
 
 | Variable | Default | Purpose |

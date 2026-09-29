@@ -38,6 +38,8 @@ services:
       # nginx is the only proxy in front of the API
       TRUST_PROXY: 1
       LOG_LEVEL: info
+      # Raise only for automated test runs (the Postman suite logs in many times)
+      RATE_LIMIT_AUTH: ${RATE_LIMIT_AUTH:-10}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hustlehub.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
