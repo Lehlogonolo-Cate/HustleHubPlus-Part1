@@ -24,7 +24,7 @@ const summary = (overrides = {}) => ({
   bookings: { confirmed: 2, completed: 2, cancelled: 1 },
   monthly: months,
   tax: {
-    tablesUsed: '2026 year of assessment',
+    tablesUsed: '2027 year of assessment',
     ageGroup: 'under65',
     deductions: 0,
     yearToDate: { taxableIncome: 18000, tax: 0, effectiveRate: 0, marginalRate: 0.18 },
@@ -44,6 +44,7 @@ describe('DashboardPage', () => {
     expect(screen.getByText('4 paid bookings')).toBeInTheDocument();
     expect(screen.getByText('Projected tax for the year')).toBeInTheDocument();
     expect(screen.getByText(/Tax year 2027/)).toBeInTheDocument();
+    expect(screen.getByText(/SARS 2027 year of assessment tables/)).toBeInTheDocument();
   });
 
   it('labels every part of the income breakdown with its value', async () => {
