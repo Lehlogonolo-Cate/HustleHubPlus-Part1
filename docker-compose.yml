@@ -9,7 +9,7 @@ name: hustlehub
 
 services:
   mongo:
-    image: mongo:8.2
+    image: mongo:7.0
     restart: unless-stopped
     volumes:
       - mongo-data:/data/db
