@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: hustlehub-api
+    env: node
+    rootDir: api
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    autoDeploy: true
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGIN
+        value: https://hustlehub-client.onrender.com
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+
+  - type: web
+    name: hustlehub-client
+    env: static
+    rootDir: client
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    autoDeploy: true
+    plan: free
+    envVars:
+      - key: VITE_API_URL
+        value: https://hustlehub-api.onrender.com

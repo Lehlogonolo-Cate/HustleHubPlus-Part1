@@ -252,18 +252,7 @@ cd .. && docker compose up -d --wait api        # back to the production limit o
 
 Useful commands: `docker compose ps` (health status), `docker compose logs -f api`, `docker compose exec api cat /app/logs/app.log` (structured logs), and `docker compose down` (stop; add `-v` to also delete the database volume).
 
-### 5.7 Live cloud deployment
-
-The API is deployed as a Docker web service on Render:
-
-- **Production API:** https://hustlehubplus-api.onrender.com
-- **HTTPS health check:** https://hustlehubplus-api.onrender.com/health
-
-Render terminates public TLS and forwards requests to the container, so production uses `USE_HTTPS=false` together with `TRUST_PROXY=1`. This preserves correct secure-request detection while avoiding a second self-signed TLS layer inside the container. MongoDB Atlas provides the production database. Secrets such as `MONGO_URI` and `JWT_SECRET` are configured only through Render environment variables and are never committed to Git.
-
-The free Render instance may take about 50 seconds to wake after inactivity. A successful health response reports `"protocol":"HTTPS"` because the application trusts Render's proxy headers.
-
-### 5.8 Environment variables (API)
+### 5.7 Environment variables (API)
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -440,22 +429,22 @@ The dashboard estimates South African **personal income tax** on the freelancer'
 1. `taxable income = max(0, earnings − deductions)`
 2. Find the SARS bracket for the taxable income.
 3. `tax before rebates = bracket base amount + (taxable income − bracket threshold) × marginal rate`
-4. Subtract the rebates: primary R17,820, plus secondary R9,765 at 65+, plus tertiary R3,249 at 75+.
+4. Subtract the rebates: primary R17,235, plus secondary R9,444 at 65+, plus tertiary R3,145 at 75+.
 5. `estimated tax = max(0, result)`. The effective rate is `tax ÷ taxable income`.
 
-**Tables used:** SARS individual rates for the 2027 year of assessment (1 March 2026 to 28 February 2027):
+**Tables used:** SARS individual rates for the 2026 year of assessment:
 
 | Taxable income (R) | Tax |
 |---|---|
-| 0 - 245,100 | 18% of taxable income |
-| 245,101 - 383,100 | 44,118 + 26% above 245,100 |
-| 383,101 - 530,200 | 79,998 + 31% above 383,100 |
-| 530,201 - 695,800 | 125,599 + 36% above 530,200 |
-| 695,801 - 887,000 | 185,215 + 39% above 695,800 |
-| 887,001 - 1,878,600 | 259,783 + 41% above 887,000 |
-| 1,878,601 and above | 666,339 + 45% above 1,878,600 |
+| 0 - 237,100 | 18% of taxable income |
+| 237,101 - 370,500 | 42,678 + 26% above 237,100 |
+| 370,501 - 512,800 | 77,362 + 31% above 370,500 |
+| 512,801 - 673,000 | 121,475 + 36% above 512,800 |
+| 673,001 - 857,900 | 179,147 + 39% above 673,000 |
+| 857,901 - 1,817,000 | 251,258 + 41% above 857,900 |
+| 1,817,001 and above | 644,489 + 45% above 1,817,000 |
 
-**Worked example.** R400,000 taxable income, under 65: 79,998 + (400,000 − 383,100) × 31% = R85,237, minus the primary rebate of R17,820, gives **R67,417** (effective rate 16.85%).
+**Worked example.** R400,000 taxable income, under 65: 77,362 + (400,000 − 370,500) × 31% = R86,507, minus the primary rebate of R17,235, gives **R69,272** (effective rate 17.3%).
 
 **What the dashboard shows**
 - **Estimated tax so far:** the calculation above applied to year-to-date earnings.
@@ -487,7 +476,7 @@ The API writes **structured JSON logs** with winston to the console, `logs/app.l
 - **Accountability:** bookings, transactions and admin actions leave an audit trail of who did what and when.
 - **Operations:** request durations and 5xx errors show performance and reliability problems.
 
-In production, the same JSON events are streamed to the **Render application log service**, providing centralised cloud logging without exposing passwords, tokens or connection strings. The verified deployment records registration, login, protected-route access and rejected-token events with timestamps, status codes and request IDs. The JSON format can also be shipped to ELK, Grafana Loki or Datadog for dashboards and alerts.
+The JSON format can be shipped straight to a log platform (ELK, Grafana Loki, Datadog) for dashboards and alerts.
 
 Sample entries (from the Newman run):
 
@@ -536,6 +525,7 @@ The collection can also be imported into Postman: `Postman/HustleHub.postman_col
 | **api** | `npm ci` → ESLint with the security plugin (`--max-warnings 0`) → Jest unit and integration tests with coverage → upload coverage |
 | **client** | `npm ci` → ESLint (`--max-warnings 0`) → Vitest component tests with coverage → `vite build` → upload the build |
 | **api-endpoints** | generate a TLS certificate → start the API over HTTPS with an in-memory database → run the Postman collection with **Newman** → upload the HTML report and logs |
+| **sonarcloud** | checks out the full history and runs the **SonarCloud** quality gate, helping catch maintainability and security regressions beyond the project’s ESLint and Semgrep checks |
 | **security** | `npm audit --audit-level=high` for the API and the client → **Semgrep** static analysis (`--error`) → upload results |
 | **containers** | runs after all the jobs above pass → `docker compose up --build --wait` → smoke tests through nginx (SPA served, `/health` OK, a protected route returns 401, HTTP redirects to HTTPS, CSP header present) → upload container logs → tear down |
 
@@ -543,11 +533,12 @@ The collection can also be imported into Postman: `Postman/HustleHub.postman_col
 
 ## 13. Static code analysis
 
-Three complementary tools run in the pipeline:
+Four complementary tools run in the pipeline:
 
-1. **Semgrep** with the `p/javascript`, `p/nodejs`, `p/react`, `p/secrets` and `p/owasp-top-ten` rule packs (144 rules), covering API code, client code, the nginx config, Dockerfiles and the Compose file.
-2. **ESLint + eslint-plugin-security** on both apps, with zero warnings allowed. It checks for object injection, unsafe regular expressions, non-literal file paths, timing attacks and `eval`. Custom rules ban `dangerouslySetInnerHTML` and `innerHTML`.
-3. **npm audit** for known-vulnerable dependencies, failing on high or critical.
+1. **SonarCloud** provides an additional security and maintainability gate over the repository, with coverage and code-quality metrics tracked for both the API and the React frontend.
+2. **Semgrep** with the `p/javascript`, `p/nodejs`, `p/react`, `p/secrets` and `p/owasp-top-ten` rule packs (144 rules), covering API code, client code, the nginx config, Dockerfiles and the Compose file.
+3. **ESLint + eslint-plugin-security** on both apps, with zero warnings allowed. It checks for object injection, unsafe regular expressions, non-literal file paths, timing attacks and `eval`. Custom rules ban `dangerouslySetInnerHTML` and `innerHTML`.
+4. **npm audit** for known-vulnerable dependencies, failing on high or critical.
 
 **Results and what they indicate**
 
